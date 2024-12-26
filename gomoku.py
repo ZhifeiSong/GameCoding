@@ -17,6 +17,10 @@ class GomokuGame:
         self.current_player = 1  # 1 = Black, 2 = White
         self.board = [[0]*BOARD_SIZE for _ in range(BOARD_SIZE)]  # 0 = empty
 
+        # History of moves for undo functionality
+        # Each entry: (row, col, player, stone_canvas_id)
+        self.move_history = []
+
         # Setup frames
         self.setup_score_frame()
         self.setup_board_canvas()
@@ -43,11 +47,20 @@ class GomokuGame:
             font=("Helvetica", 14, "bold"), bg="lightgray"
         )
         self.turn_label.pack(side=tk.LEFT, padx=20, pady=10)
+        # Add an Undo button
+        self.undo_button = tk.Button(
+            self.score_frame,
+            text="Undo Move",
+            font=("Helvetica", 12),
+            command=self.undo_move
+        )
+        self.undo_button.pack(side=tk.RIGHT, padx=10, pady=10)
+
 
     def setup_board_canvas(self):
         """Create a canvas for the Gomoku board."""
         self.canvas = tk.Canvas(
-            self.root, width=BOARD_SIZE*CELL_SIZE, height=BOARD_SIZE*CELL_SIZE, bg="white"
+            self.root, width=BOARD_SIZE*CELL_SIZE, height=BOARD_SIZE*CELL_SIZE, bg="#F9DDA4"
         )
         self.canvas.pack()
 
@@ -71,7 +84,10 @@ class GomokuGame:
             if self.board[row][col] == 0:
                 # Place a stone
                 self.board[row][col] = self.current_player
-                self.draw_stone(row, col, self.current_player)
+                stone_id = self.draw_stone(row, col, self.current_player)
+
+                # Record the move in history (for undo)
+                self.move_history.append((row, col, self.current_player, stone_id))
 
                 # Check for win
                 if self.check_win(row, col, self.current_player):
@@ -91,7 +107,8 @@ class GomokuGame:
         y2 = (row+1) * CELL_SIZE - 2
 
         color = "black" if player == 1 else "white"
-        self.canvas.create_oval(x1, y1, x2, y2, fill=color, outline="black")
+        stone_id = self.canvas.create_oval(x1, y1, x2, y2, fill=color, outline="black")
+        return stone_id
 
     def check_win(self, row, col, player):
         """
@@ -141,6 +158,7 @@ class GomokuGame:
         """Clear the board and start a new round."""
         self.board = [[0]*BOARD_SIZE for _ in range(BOARD_SIZE)]
         self.canvas.delete("all")
+        self.move_history = []  # Clear the move history
 
         # Redraw the board lines
         for i in range(BOARD_SIZE):
@@ -152,6 +170,26 @@ class GomokuGame:
         # Reset the player turn to black (or keep to whomever we wish to start next)
         self.current_player = 1
         self.turn_label.config(text="Current Turn: Black")
+    
+    def undo_move(self):
+        """Undo the last move if available."""
+        if not self.move_history:
+            return  # No moves to undo
+
+        # Pop the last move
+        row, col, player, stone_id = self.move_history.pop()
+
+        # Remove stone from board
+        self.board[row][col] = 0
+
+        # Remove stone from the canvas
+        self.canvas.delete(stone_id)
+
+        # Revert current player to the player who made the undone move
+        self.current_player = player
+        self.turn_label.config(
+            text="Current Turn: " + ("Black" if self.current_player == 1 else "White")
+        )
 
 
 def main():
