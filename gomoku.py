@@ -91,6 +91,8 @@ class GomokuGame:
 
                 # Check for win
                 if self.check_win(row, col, self.current_player):
+                    # Force UI to draw that final stone before showing the message
+                    self.canvas.update_idletasks()
                     self.handle_win(self.current_player)
                 else:
                     # Switch player
